@@ -107,6 +107,7 @@ var RoomClient = function () {
 		(0, _classCallCheck3.default)(this, RoomClient);
 
 		logger.debug('constructor() [roomId:"%s", peerName:"%s", displayName:"%s", device:%s]', roomId, peerName, displayName, device.flag);
+		console.log('constructor() [roomId:"%s", peerName:"%s", displayName:"%s", device:%s]', roomId, peerName, displayName, device.flag);
 		var protooUrl = (0, _urlFactory.getProtooUrl)(media_server_wss, peerName, roomId);
 		var protooTransport = new _protooClient2.default.WebSocketTransport(protooUrl);
 
@@ -807,6 +808,7 @@ var RoomClient = function () {
 			var displayName = _ref2.displayName,
 			    device = _ref2.device;
 
+
 			this._dispatch(stateActions.setRoomState('connecting'));
 
 			this._protoo.on('open', function () {
@@ -815,6 +817,7 @@ var RoomClient = function () {
 			});
 
 			this._protoo.on('disconnected', function () {
+				console.warn('protoo Peer "disconnected" event');
 				logger.warn('protoo Peer "disconnected" event');
 
 				_this13._dispatch(requestActions.notify({
@@ -833,6 +836,7 @@ var RoomClient = function () {
 			this._protoo.on('close', function () {
 				if (_this13._closed) return;
 
+				console.warn('protoo Peer "close" event');
 				logger.warn('protoo Peer "close" event');
 
 				if (_this13._room._state != "joined") _this13.close();
@@ -921,7 +925,9 @@ var RoomClient = function () {
 			this._room.removeAllListeners();
 
 			this._room.on('close', function (originator, appData) {
+				console.log('close_event', originator, appData);
 				if (originator === 'remote') {
+					console.warn('mediasoup Peer/Room remotely closed [appData:%o]', appData);
 					logger.warn('mediasoup Peer/Room remotely closed [appData:%o]', appData);
 
 					_this14._dispatch(stateActions.setRoomState('closed'));

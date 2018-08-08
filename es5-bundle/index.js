@@ -1,7 +1,7 @@
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-	value: true
+		value: true
 });
 exports.Init = undefined;
 
@@ -54,151 +54,151 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 // import Room from './components/Room';
 
 var Init = exports.Init = function Init(config) {
-	var _this = this;
+		var _this = this;
 
-	(0, _classCallCheck3.default)(this, Init);
+		(0, _classCallCheck3.default)(this, Init);
 
-	console.warn('Easy mediasoup v1.1.9');
-	global.emitter = this.emitter = new emitter.default();
-	this.roomClientMiddleware = _roomClientMiddleware2.default;
-	var logger = new _Logger2.default();
+		console.warn('Easy mediasoup v1.1.9');
+		global.emitter = this.emitter = new emitter.default();
+		this.roomClientMiddleware = _roomClientMiddleware2.default;
+		var logger = new _Logger2.default();
 
-	this.emitter.on("joinRoom", function (client) {
-		_this.client = client;
-	});
-
-	//settingup redux
-	var reduxMiddlewares = [_reduxThunk2.default, _roomClientMiddleware2.default];
-
-	if (process.env.NODE_ENV === 'development') {
-		var reduxLogger = (0, _reduxLogger.createLogger)({
-			duration: true,
-			timestamp: false,
-			level: 'log',
-			logErrors: true
+		this.emitter.on("joinRoom", function (client) {
+				_this.client = client;
 		});
 
-		reduxMiddlewares.push(reduxLogger);
-	}
+		//settingup redux
+		var reduxMiddlewares = [_reduxThunk2.default, _roomClientMiddleware2.default];
 
-	var store = this.store = (0, _redux.createStore)(_reducers2.default, undefined, _redux.applyMiddleware.apply(undefined, reduxMiddlewares));
-	//room settings
-	var peerName = config.peerName;
-	// const urlParser = new UrlParse(window.location.href, true);
-	var roomId = config.roomId;
-	var produce = config.produce || true;
-	var displayName = config.displayName;
-	var isSipEndpoint = config.sipEndpoint || false;
-	var useSimulcast = config.useSimulcast || false;
-	var media_server_wss = config.media_server_wss;
-	var turnservers = config.turnservers || [];
-	var args = [];
+		if (process.env.NODE_ENV === 'development') {
+				var reduxLogger = (0, _reduxLogger.createLogger)({
+						duration: true,
+						timestamp: false,
+						level: 'log',
+						logErrors: true
+				});
 
-	args.video_constrains = config.video_constrains || [];
-	args.simulcast_options = config.simulcast_options || [];
-	args.initially_muted = config.initially_muted || false;
-	args.produce = config.produce;
-	args.skip_consumer = config.skip_consumer;
-	args.user_uuid = config.user_uuid;
+				reduxMiddlewares.push(reduxLogger);
+		}
 
-	// if (!roomId)
-	// {
-	// 	roomId = randomString({ length: 8 }).toLowerCase();
+		var store = this.store = (0, _redux.createStore)(_reducers2.default, undefined, _redux.applyMiddleware.apply(undefined, reduxMiddlewares));
+		//room settings
+		var peerName = config.peerName;
+		// const urlParser = new UrlParse(window.location.href, true);
+		var roomId = config.roomId;
+		var produce = config.produce || true;
+		var displayName = config.displayName;
+		var isSipEndpoint = config.sipEndpoint || false;
+		var useSimulcast = config.useSimulcast || false;
+		var media_server_wss = config.media_server_wss;
+		var turnservers = config.turnservers || [];
+		var args = [];
 
-	// 	urlParser.query.roomId = roomId;
-	// 	window.history.pushState('', '', urlParser.toString());
-	// }
+		args.video_constrains = config.video_constrains || [];
+		args.simulcast_options = config.simulcast_options || [];
+		args.initially_muted = config.initially_muted || false;
+		args.produce = config.produce;
+		args.skip_consumer = config.skip_consumer;
+		args.user_uuid = config.user_uuid;
 
-	// Get the effective/shareable Room URL.
-	// const roomUrlParser = new UrlParse(window.location.href, true);
+		// if (!roomId)
+		// {
+		// 	roomId = randomString({ length: 8 }).toLowerCase();
 
-	// for (const key of Object.keys(roomUrlParser.query))
-	// {
-	// 	// Don't keep some custom params.
-	// 	switch (key)
-	// 	{
-	// 		case 'roomId':
-	// 		case 'simulcast':
-	// 			break;
-	// 		default:
-	// 			delete roomUrlParser.query[key];
-	// 	}
-	// }
-	// delete roomUrlParser.hash;
+		// 	urlParser.query.roomId = roomId;
+		// 	window.history.pushState('', '', urlParser.toString());
+		// }
 
-	// const roomUrl = roomUrlParser.toString();
+		// Get the effective/shareable Room URL.
+		// const roomUrlParser = new UrlParse(window.location.href, true);
 
-	// Get displayName from cookie (if not already given as param).
-	// const userCookie = cookiesManager.getUser() || {};
-	var displayNameSet = void 0;
+		// for (const key of Object.keys(roomUrlParser.query))
+		// {
+		// 	// Don't keep some custom params.
+		// 	switch (key)
+		// 	{
+		// 		case 'roomId':
+		// 		case 'simulcast':
+		// 			break;
+		// 		default:
+		// 			delete roomUrlParser.query[key];
+		// 	}
+		// }
+		// delete roomUrlParser.hash;
 
-	// if (!displayName)
-	// 	displayName = userCookie.displayName;
+		// const roomUrl = roomUrlParser.toString();
 
-	if (displayName) {
-		displayNameSet = true;
-	} else {
-		displayName = "";
-		displayNameSet = false;
-	}
+		// Get displayName from cookie (if not already given as param).
+		// const userCookie = cookiesManager.getUser() || {};
+		var displayNameSet = void 0;
 
-	// Get current device.
-	var device = (0, _mediasoupClient.getDeviceInfo)();
+		// if (!displayName)
+		// 	displayName = userCookie.displayName;
 
-	// If a SIP endpoint mangle device info.
-	if (isSipEndpoint) {
-		device.flag = 'sipendpoint';
-		device.name = 'SIP Endpoint';
-		device.version = undefined;
-	}
+		if (displayName) {
+				displayNameSet = true;
+		} else {
+				displayName = "";
+				displayNameSet = false;
+		}
 
-	// // NOTE: I don't like this.
-	// store.dispatch(
-	// 	stateActions.setRoomUrl(roomUrl));
+		// Get current device.
+		var device = (0, _mediasoupClient.getDeviceInfo)();
 
-	// NOTE: I don't like this.
-	store.dispatch(stateActions.setMe({ peerName: peerName, displayName: displayName, displayNameSet: displayNameSet, device: device }));
+		// If a SIP endpoint mangle device info.
+		if (isSipEndpoint) {
+				device.flag = 'sipendpoint';
+				device.name = 'SIP Endpoint';
+				device.version = undefined;
+		}
 
-	// NOTE: I don't like this.
-	store.dispatch(requestActions.joinRoom({ media_server_wss: media_server_wss, roomId: roomId, peerName: peerName, displayName: displayName, device: device, useSimulcast: useSimulcast, produce: produce, turnservers: turnservers, args: args }));
+		// // NOTE: I don't like this.
+		// store.dispatch(
+		// 	stateActions.setRoomUrl(roomUrl));
 
-	// TODO: Debugging stuff.
+		// NOTE: I don't like this.
+		store.dispatch(stateActions.setMe({ peerName: peerName, displayName: displayName, displayNameSet: displayNameSet, device: device }));
 
-	// setInterval(() =>
-	// {
-	// 	if (!global.CLIENT._room.peers[0])
-	// 	{
-	// 		delete global.CONSUMER;
+		// NOTE: I don't like this.
+		store.dispatch(requestActions.joinRoom({ media_server_wss: media_server_wss, roomId: roomId, peerName: peerName, displayName: displayName, device: device, useSimulcast: useSimulcast, produce: produce, turnservers: turnservers, args: args }));
 
-	// 		return;
-	// 	}
+		// TODO: Debugging stuff.
 
-	// 	const peer = global.CLIENT._room.peers[0];
+		// setInterval(() =>
+		// {
+		// 	if (!global.CLIENT._room.peers[0])
+		// 	{
+		// 		delete global.CONSUMER;
 
-	// 	global.CONSUMER = peer.consumers[peer.consumers.length - 1];
-	// }, 2000);
+		// 		return;
+		// 	}
 
-	// global.sendSdp = function()
-	// {
-	// 	logger.debug('---------- SEND_TRANSPORT LOCAL SDP OFFER:');
-	// 	logger.debug(
-	// 		global.CLIENT._sendTransport._handler._pc.localDescription.sdp);
+		// 	const peer = global.CLIENT._room.peers[0];
 
-	// 	logger.debug('---------- SEND_TRANSPORT REMOTE SDP ANSWER:');
-	// 	logger.debug(
-	// 		global.CLIENT._sendTransport._handler._pc.remoteDescription.sdp);
-	// };
+		// 	global.CONSUMER = peer.consumers[peer.consumers.length - 1];
+		// }, 2000);
 
-	// global.recvSdp = function()
-	// {
-	// 	logger.debug('---------- RECV_TRANSPORT REMOTE SDP OFFER:');
-	// 	logger.debug(
-	// 		global.CLIENT._recvTransport._handler._pc.remoteDescription.sdp);
+		// global.sendSdp = function()
+		// {
+		// 	logger.debug('---------- SEND_TRANSPORT LOCAL SDP OFFER:');
+		// 	logger.debug(
+		// 		global.CLIENT._sendTransport._handler._pc.localDescription.sdp);
 
-	// 	logger.debug('---------- RECV_TRANSPORT LOCAL SDP ANSWER:');
-	// 	logger.debug(
-	// 		global.CLIENT._recvTransport._handler._pc.localDescription.sdp);
-	// };
+		// 	logger.debug('---------- SEND_TRANSPORT REMOTE SDP ANSWER:');
+		// 	logger.debug(
+		// 		global.CLIENT._sendTransport._handler._pc.remoteDescription.sdp);
+		// };
+
+		// global.recvSdp = function()
+		// {
+		// 	logger.debug('---------- RECV_TRANSPORT REMOTE SDP OFFER:');
+		// 	logger.debug(
+		// 		global.CLIENT._recvTransport._handler._pc.remoteDescription.sdp);
+
+		// 	logger.debug('---------- RECV_TRANSPORT LOCAL SDP ANSWER:');
+		// 	logger.debug(
+		// 		global.CLIENT._recvTransport._handler._pc.localDescription.sdp);
+		// };
 };
 // import * as cookiesManager from './cookiesManager';
 

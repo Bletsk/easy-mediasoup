@@ -7,7 +7,7 @@
     "start": "http-server -S -C server.crt -K server.key",
     "dev": "npm test -- -w",
     "init": "mkdir es5-bundle",
-    "clean": "rmdir es5-bundle /s /q",
+    "clean": "rm -rf es5-bundle",
     "prebuild": "npm run clean && npm run init",
     "babel-build": "babel ./src -d ./es5-bundle --ignore test.js --presets babel-preset-env",
     "build": "npm run babel-build && webpack",

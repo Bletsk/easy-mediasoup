@@ -35,7 +35,8 @@ var Logger = function () {
 			this._warn = (0, _debug2.default)(APP_NAME + ':WARN');
 			this._error = (0, _debug2.default)(APP_NAME + ':ERROR');
 		}
-		this._debug.enabled = false;
+		this._debug.enabled = true;
+		// this._debug.enabled = false
 		if (global.debug_mode) {
 			this._debug.enabled = true;
 		} else {
@@ -217,6 +218,7 @@ var RoomClient = function () {
 
 		// protoo-client Peer instance.
 		this._protoo = new _protooClient2.default.Peer(protooTransport);
+		console.warn('alo', this._protoo);
 		// set turn servers
 		ROOM_OPTIONS.turnServers = turnservers;
 		// mediasoup-client Room instance.
@@ -907,7 +909,6 @@ var RoomClient = function () {
 			this._protoo.on('close', function () {
 				if (_this13._closed) return;
 
-				console.warn('protoo Peer "close" event');
 				logger.warn('protoo Peer "close" event');
 
 				if (_this13._room._state != "joined") _this13.close();
@@ -1485,11 +1486,17 @@ var RoomClient = function () {
 				}).then(function (stream) {
 					var track = stream.getAudioTracks()[0];
 
-					return _this19._micProducer.replaceTrack(track).then(function (newTrack) {
-						track.stop();
+					if (_this19._micProducer) {
+						console.warn('_micProducer is present');
+						return _this19._micProducer.replaceTrack(track).then(function (newTrack) {
+							track.stop();
 
-						return newTrack;
-					});
+							return newTrack;
+						});
+					} else {
+						console.warn('_micProducer is not found');
+						return _this19._setMicProducer();
+					}
 				}).then(function (newTrack) {
 					_this19._dispatch(stateActions.setProducerTrack(_this19._micProducer.id, newTrack));
 
@@ -1892,7 +1899,7 @@ exports.default = RoomClient;
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-		value: true
+	value: true
 });
 exports.Init = undefined;
 
@@ -1945,151 +1952,151 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 // import Room from './components/Room';
 
 var Init = exports.Init = function Init(config) {
-		var _this = this;
+	var _this = this;
 
-		(0, _classCallCheck3.default)(this, Init);
+	(0, _classCallCheck3.default)(this, Init);
 
-		console.warn('Easy mediasoup v1.1.9');
-		global.emitter = this.emitter = new emitter.default();
-		this.roomClientMiddleware = _roomClientMiddleware2.default;
-		var logger = new _Logger2.default();
+	console.warn('Easy mediasoup v1.1.9');
+	global.emitter = this.emitter = new emitter.default();
+	this.roomClientMiddleware = _roomClientMiddleware2.default;
+	var logger = new _Logger2.default();
 
-		this.emitter.on("joinRoom", function (client) {
-				_this.client = client;
+	this.emitter.on("joinRoom", function (client) {
+		_this.client = client;
+	});
+
+	//settingup redux
+	var reduxMiddlewares = [_reduxThunk2.default, _roomClientMiddleware2.default];
+
+	if (process.env.NODE_ENV === 'development') {
+		var reduxLogger = (0, _reduxLogger.createLogger)({
+			duration: true,
+			timestamp: false,
+			level: 'log',
+			logErrors: true
 		});
 
-		//settingup redux
-		var reduxMiddlewares = [_reduxThunk2.default, _roomClientMiddleware2.default];
+		reduxMiddlewares.push(reduxLogger);
+	}
 
-		if (process.env.NODE_ENV === 'development') {
-				var reduxLogger = (0, _reduxLogger.createLogger)({
-						duration: true,
-						timestamp: false,
-						level: 'log',
-						logErrors: true
-				});
+	var store = this.store = (0, _redux.createStore)(_reducers2.default, undefined, _redux.applyMiddleware.apply(undefined, reduxMiddlewares));
+	//room settings
+	var peerName = config.peerName;
+	// const urlParser = new UrlParse(window.location.href, true);
+	var roomId = config.roomId;
+	var produce = config.produce || true;
+	var displayName = config.displayName;
+	var isSipEndpoint = config.sipEndpoint || false;
+	var useSimulcast = config.useSimulcast || false;
+	var media_server_wss = config.media_server_wss;
+	var turnservers = config.turnservers || [];
+	var args = [];
 
-				reduxMiddlewares.push(reduxLogger);
-		}
+	args.video_constrains = config.video_constrains || [];
+	args.simulcast_options = config.simulcast_options || [];
+	args.initially_muted = config.initially_muted || false;
+	args.produce = config.produce;
+	args.skip_consumer = config.skip_consumer;
+	args.user_uuid = config.user_uuid;
 
-		var store = this.store = (0, _redux.createStore)(_reducers2.default, undefined, _redux.applyMiddleware.apply(undefined, reduxMiddlewares));
-		//room settings
-		var peerName = config.peerName;
-		// const urlParser = new UrlParse(window.location.href, true);
-		var roomId = config.roomId;
-		var produce = config.produce || true;
-		var displayName = config.displayName;
-		var isSipEndpoint = config.sipEndpoint || false;
-		var useSimulcast = config.useSimulcast || false;
-		var media_server_wss = config.media_server_wss;
-		var turnservers = config.turnservers || [];
-		var args = [];
+	// if (!roomId)
+	// {
+	// 	roomId = randomString({ length: 8 }).toLowerCase();
 
-		args.video_constrains = config.video_constrains || [];
-		args.simulcast_options = config.simulcast_options || [];
-		args.initially_muted = config.initially_muted || false;
-		args.produce = config.produce;
-		args.skip_consumer = config.skip_consumer;
-		args.user_uuid = config.user_uuid;
+	// 	urlParser.query.roomId = roomId;
+	// 	window.history.pushState('', '', urlParser.toString());
+	// }
 
-		// if (!roomId)
-		// {
-		// 	roomId = randomString({ length: 8 }).toLowerCase();
+	// Get the effective/shareable Room URL.
+	// const roomUrlParser = new UrlParse(window.location.href, true);
 
-		// 	urlParser.query.roomId = roomId;
-		// 	window.history.pushState('', '', urlParser.toString());
-		// }
+	// for (const key of Object.keys(roomUrlParser.query))
+	// {
+	// 	// Don't keep some custom params.
+	// 	switch (key)
+	// 	{
+	// 		case 'roomId':
+	// 		case 'simulcast':
+	// 			break;
+	// 		default:
+	// 			delete roomUrlParser.query[key];
+	// 	}
+	// }
+	// delete roomUrlParser.hash;
 
-		// Get the effective/shareable Room URL.
-		// const roomUrlParser = new UrlParse(window.location.href, true);
+	// const roomUrl = roomUrlParser.toString();
 
-		// for (const key of Object.keys(roomUrlParser.query))
-		// {
-		// 	// Don't keep some custom params.
-		// 	switch (key)
-		// 	{
-		// 		case 'roomId':
-		// 		case 'simulcast':
-		// 			break;
-		// 		default:
-		// 			delete roomUrlParser.query[key];
-		// 	}
-		// }
-		// delete roomUrlParser.hash;
+	// Get displayName from cookie (if not already given as param).
+	// const userCookie = cookiesManager.getUser() || {};
+	var displayNameSet = void 0;
 
-		// const roomUrl = roomUrlParser.toString();
+	// if (!displayName)
+	// 	displayName = userCookie.displayName;
 
-		// Get displayName from cookie (if not already given as param).
-		// const userCookie = cookiesManager.getUser() || {};
-		var displayNameSet = void 0;
+	if (displayName) {
+		displayNameSet = true;
+	} else {
+		displayName = "";
+		displayNameSet = false;
+	}
 
-		// if (!displayName)
-		// 	displayName = userCookie.displayName;
+	// Get current device.
+	var device = (0, _mediasoupClient.getDeviceInfo)();
 
-		if (displayName) {
-				displayNameSet = true;
-		} else {
-				displayName = "";
-				displayNameSet = false;
-		}
+	// If a SIP endpoint mangle device info.
+	if (isSipEndpoint) {
+		device.flag = 'sipendpoint';
+		device.name = 'SIP Endpoint';
+		device.version = undefined;
+	}
 
-		// Get current device.
-		var device = (0, _mediasoupClient.getDeviceInfo)();
+	// // NOTE: I don't like this.
+	// store.dispatch(
+	// 	stateActions.setRoomUrl(roomUrl));
 
-		// If a SIP endpoint mangle device info.
-		if (isSipEndpoint) {
-				device.flag = 'sipendpoint';
-				device.name = 'SIP Endpoint';
-				device.version = undefined;
-		}
+	// NOTE: I don't like this.
+	store.dispatch(stateActions.setMe({ peerName: peerName, displayName: displayName, displayNameSet: displayNameSet, device: device }));
 
-		// // NOTE: I don't like this.
-		// store.dispatch(
-		// 	stateActions.setRoomUrl(roomUrl));
+	// NOTE: I don't like this.
+	store.dispatch(requestActions.joinRoom({ media_server_wss: media_server_wss, roomId: roomId, peerName: peerName, displayName: displayName, device: device, useSimulcast: useSimulcast, produce: produce, turnservers: turnservers, args: args }));
 
-		// NOTE: I don't like this.
-		store.dispatch(stateActions.setMe({ peerName: peerName, displayName: displayName, displayNameSet: displayNameSet, device: device }));
+	// TODO: Debugging stuff.
 
-		// NOTE: I don't like this.
-		store.dispatch(requestActions.joinRoom({ media_server_wss: media_server_wss, roomId: roomId, peerName: peerName, displayName: displayName, device: device, useSimulcast: useSimulcast, produce: produce, turnservers: turnservers, args: args }));
+	// setInterval(() =>
+	// {
+	// 	if (!global.CLIENT._room.peers[0])
+	// 	{
+	// 		delete global.CONSUMER;
 
-		// TODO: Debugging stuff.
+	// 		return;
+	// 	}
 
-		// setInterval(() =>
-		// {
-		// 	if (!global.CLIENT._room.peers[0])
-		// 	{
-		// 		delete global.CONSUMER;
+	// 	const peer = global.CLIENT._room.peers[0];
 
-		// 		return;
-		// 	}
+	// 	global.CONSUMER = peer.consumers[peer.consumers.length - 1];
+	// }, 2000);
 
-		// 	const peer = global.CLIENT._room.peers[0];
+	// global.sendSdp = function()
+	// {
+	// 	logger.debug('---------- SEND_TRANSPORT LOCAL SDP OFFER:');
+	// 	logger.debug(
+	// 		global.CLIENT._sendTransport._handler._pc.localDescription.sdp);
 
-		// 	global.CONSUMER = peer.consumers[peer.consumers.length - 1];
-		// }, 2000);
+	// 	logger.debug('---------- SEND_TRANSPORT REMOTE SDP ANSWER:');
+	// 	logger.debug(
+	// 		global.CLIENT._sendTransport._handler._pc.remoteDescription.sdp);
+	// };
 
-		// global.sendSdp = function()
-		// {
-		// 	logger.debug('---------- SEND_TRANSPORT LOCAL SDP OFFER:');
-		// 	logger.debug(
-		// 		global.CLIENT._sendTransport._handler._pc.localDescription.sdp);
+	// global.recvSdp = function()
+	// {
+	// 	logger.debug('---------- RECV_TRANSPORT REMOTE SDP OFFER:');
+	// 	logger.debug(
+	// 		global.CLIENT._recvTransport._handler._pc.remoteDescription.sdp);
 
-		// 	logger.debug('---------- SEND_TRANSPORT REMOTE SDP ANSWER:');
-		// 	logger.debug(
-		// 		global.CLIENT._sendTransport._handler._pc.remoteDescription.sdp);
-		// };
-
-		// global.recvSdp = function()
-		// {
-		// 	logger.debug('---------- RECV_TRANSPORT REMOTE SDP OFFER:');
-		// 	logger.debug(
-		// 		global.CLIENT._recvTransport._handler._pc.remoteDescription.sdp);
-
-		// 	logger.debug('---------- RECV_TRANSPORT LOCAL SDP ANSWER:');
-		// 	logger.debug(
-		// 		global.CLIENT._recvTransport._handler._pc.localDescription.sdp);
-		// };
+	// 	logger.debug('---------- RECV_TRANSPORT LOCAL SDP ANSWER:');
+	// 	logger.debug(
+	// 		global.CLIENT._recvTransport._handler._pc.localDescription.sdp);
+	// };
 };
 // import * as cookiesManager from './cookiesManager';
 
@@ -2419,7 +2426,7 @@ exports.default = notifications;
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-			value: true
+	value: true
 });
 
 var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
@@ -2439,87 +2446,87 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 var initialState = {};
 
 var peers = function peers() {
-			var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : initialState;
-			var action = arguments[1];
+	var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : initialState;
+	var action = arguments[1];
 
-			switch (action.type) {
-						case 'ADD_PEER':
-									{
-												var peer = action.payload.peer;
+	switch (action.type) {
+		case 'ADD_PEER':
+			{
+				var peer = action.payload.peer;
 
-												global.emitter.emit("peerAdded", peer);
-												return (0, _extends7.default)({}, state, (0, _defineProperty3.default)({}, peer.name, peer));
-									}
-
-						case 'REMOVE_PEER':
-									{
-												var peerName = action.payload.peerName;
-
-												var newState = (0, _extends7.default)({}, state);
-
-												delete newState[peerName];
-												global.emitter.emit("peerRemoved", peerName);
-												return newState;
-									}
-
-						case 'SET_PEER_DISPLAY_NAME':
-									{
-												var _action$payload = action.payload,
-												    displayName = _action$payload.displayName,
-												    _peerName = _action$payload.peerName;
-
-												var _peer = state[_peerName];
-
-												if (!_peer) throw new Error('no Peer found');
-
-												var newPeer = (0, _extends7.default)({}, _peer, { displayName: displayName });
-
-												return (0, _extends7.default)({}, state, (0, _defineProperty3.default)({}, newPeer.name, newPeer));
-									}
-
-						case 'ADD_CONSUMER':
-									{
-												var _action$payload2 = action.payload,
-												    consumer = _action$payload2.consumer,
-												    _peerName2 = _action$payload2.peerName;
-
-												var _peer2 = state[_peerName2];
-
-												if (!_peer2) throw new Error('no Peer found for new Consumer');
-
-												var newConsumers = [].concat((0, _toConsumableArray3.default)(_peer2.consumers), [consumer.id]);
-												var _newPeer = (0, _extends7.default)({}, _peer2, { consumers: newConsumers });
-												global.emitter.emit("peerConsumerAdded", _newPeer);
-												return (0, _extends7.default)({}, state, (0, _defineProperty3.default)({}, _newPeer.name, _newPeer));
-									}
-
-						case 'REMOVE_CONSUMER':
-									{
-												var _action$payload3 = action.payload,
-												    consumerId = _action$payload3.consumerId,
-												    _peerName3 = _action$payload3.peerName;
-
-												var _peer3 = state[_peerName3];
-
-												// NOTE: This means that the Peer was closed before, so it's ok.
-												if (!_peer3) return state;
-
-												var idx = _peer3.consumers.indexOf(consumerId);
-
-												if (idx === -1) throw new Error('Consumer not found');
-
-												var _newConsumers = _peer3.consumers.slice();
-
-												_newConsumers.splice(idx, 1);
-
-												var _newPeer2 = (0, _extends7.default)({}, _peer3, { consumers: _newConsumers });
-												global.emitter.emit("peerConsumerRemoved", _newPeer2);
-												return (0, _extends7.default)({}, state, (0, _defineProperty3.default)({}, _newPeer2.name, _newPeer2));
-									}
-
-						default:
-									return state;
+				global.emitter.emit("peerAdded", peer);
+				return (0, _extends7.default)({}, state, (0, _defineProperty3.default)({}, peer.name, peer));
 			}
+
+		case 'REMOVE_PEER':
+			{
+				var peerName = action.payload.peerName;
+
+				var newState = (0, _extends7.default)({}, state);
+
+				delete newState[peerName];
+				global.emitter.emit("peerRemoved", peerName);
+				return newState;
+			}
+
+		case 'SET_PEER_DISPLAY_NAME':
+			{
+				var _action$payload = action.payload,
+				    displayName = _action$payload.displayName,
+				    _peerName = _action$payload.peerName;
+
+				var _peer = state[_peerName];
+
+				if (!_peer) throw new Error('no Peer found');
+
+				var newPeer = (0, _extends7.default)({}, _peer, { displayName: displayName });
+
+				return (0, _extends7.default)({}, state, (0, _defineProperty3.default)({}, newPeer.name, newPeer));
+			}
+
+		case 'ADD_CONSUMER':
+			{
+				var _action$payload2 = action.payload,
+				    consumer = _action$payload2.consumer,
+				    _peerName2 = _action$payload2.peerName;
+
+				var _peer2 = state[_peerName2];
+
+				if (!_peer2) throw new Error('no Peer found for new Consumer');
+
+				var newConsumers = [].concat((0, _toConsumableArray3.default)(_peer2.consumers), [consumer.id]);
+				var _newPeer = (0, _extends7.default)({}, _peer2, { consumers: newConsumers });
+				global.emitter.emit("peerConsumerAdded", _newPeer);
+				return (0, _extends7.default)({}, state, (0, _defineProperty3.default)({}, _newPeer.name, _newPeer));
+			}
+
+		case 'REMOVE_CONSUMER':
+			{
+				var _action$payload3 = action.payload,
+				    consumerId = _action$payload3.consumerId,
+				    _peerName3 = _action$payload3.peerName;
+
+				var _peer3 = state[_peerName3];
+
+				// NOTE: This means that the Peer was closed before, so it's ok.
+				if (!_peer3) return state;
+
+				var idx = _peer3.consumers.indexOf(consumerId);
+
+				if (idx === -1) throw new Error('Consumer not found');
+
+				var _newConsumers = _peer3.consumers.slice();
+
+				_newConsumers.splice(idx, 1);
+
+				var _newPeer2 = (0, _extends7.default)({}, _peer3, { consumers: _newConsumers });
+				global.emitter.emit("peerConsumerRemoved", _newPeer2);
+				return (0, _extends7.default)({}, state, (0, _defineProperty3.default)({}, _newPeer2.name, _newPeer2));
+			}
+
+		default:
+			return state;
+	}
 };
 
 exports.default = peers;
@@ -10666,6 +10673,10 @@ var Room = function (_EnhancedEventEmitter) {
 						roomSettings = response;
 
 						logger.debug('join() | got Room settings:%o', roomSettings);
+					})
+					.catch(function(error){
+						console.log("error getting room data");
+						console.log(error);
 					});
 				}
 			}).then(function () {
@@ -19353,10 +19364,13 @@ function checkCapabilitiesForRoom(roomRtpCapabilities) {
 
   return _Device2.default.Handler.getNativeRtpCapabilities().then(function (nativeRtpCapabilities) {
     var extendedRtpCapabilities = ortc.getExtendedRtpCapabilities(nativeRtpCapabilities, roomRtpCapabilities);
+    console.log('extendedRtpCapabilities', extendedRtpCapabilities);
 
     return {
-      audio: ortc.canSend('audio', extendedRtpCapabilities),
-      video: ortc.canSend('video', extendedRtpCapabilities)
+      // audio: ortc.canSend('audio', extendedRtpCapabilities),
+      // video: ortc.canSend('video', extendedRtpCapabilities)
+      audio: ortc.canSend('audio', true),
+      video: ortc.canSend('video', true)
     };
   });
 }
@@ -25007,31 +25021,37 @@ module.exports = require('../package.json').version;
 
 },{"../package.json":224}],224:[function(require,module,exports){
 module.exports={
-  "_from": "websocket@^1.0.25",
+  "_args": [
+    [
+      "websocket@1.0.26",
+      "/home/serg/Рабочий стол/code/ems"
+    ]
+  ],
+  "_from": "websocket@1.0.26",
   "_id": "websocket@1.0.26",
   "_inBundle": false,
   "_integrity": "sha512-fjcrYDPIQxpTnqFQ9JjxUQcdvR89MFAOjPBlF+vjOt49w/XW4fJknUoMz/mDIn2eK1AdslVojcaOxOqyZZV8rw==",
   "_location": "/websocket",
+  "_optional": true,
   "_phantomChildren": {
     "ms": "2.0.0"
   },
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "websocket@^1.0.25",
+    "raw": "websocket@1.0.26",
     "name": "websocket",
     "escapedName": "websocket",
-    "rawSpec": "^1.0.25",
+    "rawSpec": "1.0.26",
     "saveSpec": null,
-    "fetchSpec": "^1.0.25"
+    "fetchSpec": "1.0.26"
   },
   "_requiredBy": [
     "/protoo-client"
   ],
   "_resolved": "https://registry.npmjs.org/websocket/-/websocket-1.0.26.tgz",
-  "_shasum": "a03a01299849c35268c83044aa919c6374be8194",
-  "_spec": "websocket@^1.0.25",
-  "_where": "C:\\Users\\black\\Desktop\\code\\easy-mediasoup\\node_modules\\protoo-client",
+  "_spec": "1.0.26",
+  "_where": "/home/serg/Рабочий стол/code/ems",
   "author": {
     "name": "Brian McKelvey",
     "email": "brian@worlize.com",
@@ -25041,7 +25061,6 @@ module.exports={
   "bugs": {
     "url": "https://github.com/theturtle32/WebSocket-Node/issues"
   },
-  "bundleDependencies": false,
   "config": {
     "verbose": false
   },
@@ -25058,7 +25077,6 @@ module.exports={
     "typedarray-to-buffer": "^3.1.2",
     "yaeti": "^0.0.6"
   },
-  "deprecated": false,
   "description": "Websocket Client & Server Library implementing the WebSocket protocol as specified in RFC 6455.",
   "devDependencies": {
     "buffer-equal": "^1.0.0",

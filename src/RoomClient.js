@@ -85,6 +85,7 @@ export default class RoomClient
 
 		// protoo-client Peer instance.
 		this._protoo = new protooClient.Peer(protooTransport);
+		console.warn('alo', this._protoo);
 		// set turn servers
 		ROOM_OPTIONS.turnServers = turnservers
 		// mediasoup-client Room instance.
@@ -780,7 +781,6 @@ export default class RoomClient
 			if (this._closed)
 				return;
 
-			console.warn('protoo Peer "close" event');
 			logger.warn('protoo Peer "close" event');
 
 			if(this._room._state != "joined")
@@ -1449,13 +1449,20 @@ export default class RoomClient
 				.then( (stream) => {
 					const track = stream.getAudioTracks()[0];
 
-					return this._micProducer.replaceTrack(track)
-					.then((newTrack) =>
-					{
-						track.stop();
+					if(this._micProducer){
+						// console.warn('_micProducer is present');
+						return this._micProducer.replaceTrack(track)
+						.then((newTrack) =>
+						{
+							track.stop();
 
-						return newTrack;
-					});
+							return newTrack;
+						});
+					}
+					else {
+						// console.warn('_micProducer is not found');
+						return this._setMicProducer();
+					}
 				})
 				.then( (newTrack) => {
 					this._dispatch(

@@ -146,6 +146,7 @@ var RoomClient = function () {
 
 		// protoo-client Peer instance.
 		this._protoo = new _protooClient2.default.Peer(protooTransport);
+		console.warn('alo', this._protoo);
 		// set turn servers
 		ROOM_OPTIONS.turnServers = turnservers;
 		// mediasoup-client Room instance.
@@ -836,7 +837,6 @@ var RoomClient = function () {
 			this._protoo.on('close', function () {
 				if (_this13._closed) return;
 
-				console.warn('protoo Peer "close" event');
 				logger.warn('protoo Peer "close" event');
 
 				if (_this13._room._state != "joined") _this13.close();
@@ -1414,11 +1414,17 @@ var RoomClient = function () {
 				}).then(function (stream) {
 					var track = stream.getAudioTracks()[0];
 
-					return _this19._micProducer.replaceTrack(track).then(function (newTrack) {
-						track.stop();
+					if (_this19._micProducer) {
+						console.warn('_micProducer is present');
+						return _this19._micProducer.replaceTrack(track).then(function (newTrack) {
+							track.stop();
 
-						return newTrack;
-					});
+							return newTrack;
+						});
+					} else {
+						console.warn('_micProducer is not found');
+						return _this19._setMicProducer();
+					}
 				}).then(function (newTrack) {
 					_this19._dispatch(stateActions.setProducerTrack(_this19._micProducer.id, newTrack));
 

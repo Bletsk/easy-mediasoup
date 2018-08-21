@@ -1487,14 +1487,14 @@ var RoomClient = function () {
 					var track = stream.getAudioTracks()[0];
 
 					if (_this19._micProducer) {
-						console.warn('_micProducer is present');
+						// console.warn('_micProducer is present');
 						return _this19._micProducer.replaceTrack(track).then(function (newTrack) {
 							track.stop();
 
 							return newTrack;
 						});
 					} else {
-						console.warn('_micProducer is not found');
+						// console.warn('_micProducer is not found');
 						return _this19._setMicProducer();
 					}
 				}).then(function (newTrack) {

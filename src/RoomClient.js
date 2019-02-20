@@ -21,19 +21,19 @@ const ROOM_OPTIONS =
 	}
 };
 
-let DEFAULT_VIDEO_CONSTRAINS =
-{
-	qvga : { width: { ideal: 320 }, height: { ideal: 240 } },
-	vga  : { width: { ideal: 640 }, height: { ideal: 480 } },
-	hd   : { width: { ideal: 1280 }, height: { ideal: 720 } }
-};
-
-let DEFAULT_SIMULCAST_OPTIONS =
-{
-	low : 100000,
-	medium  : 300000,
-	high   : 1500000
-};
+// let DEFAULT_VIDEO_CONSTRAINS =
+// {
+// 	qvga : { width: { ideal: 320 }, height: { ideal: 240 } },
+// 	vga  : { width: { ideal: 640 }, height: { ideal: 480 } },
+// 	hd   : { width: { ideal: 1280 }, height: { ideal: 720 } }
+// };
+//
+// let DEFAULT_SIMULCAST_OPTIONS =
+// {
+// 	low : 100000,
+// 	medium  : 300000,
+// 	high   : 1500000
+// };
 
 let VIDEO_CONSTRAINS = [];
 let SIMULCAST_OPTIONS = [];
@@ -63,8 +63,7 @@ export default class RoomClient
 		this._closed = false;
 
 		// Whether we should produce.
-		this._produce = args.produce;
-
+		this._produce = args.produce || produce;
 
 		this._skip_consumer = args.skip_consumer;
 
@@ -219,6 +218,7 @@ export default class RoomClient
 		this._activateWebcam();
 	}
 
+
 	setScreenShare(streamId){
 		logger.debug("setScreenShare()");
 		this._screenStreamId = streamId;
@@ -262,7 +262,9 @@ export default class RoomClient
 			stateActions.setScreenShareInProgress(true));
 
 		try {
-			this._screenShareProducer = await _setScreenShareProducer();
+			console.error('poop');
+			await this._setScreenShareProducer();
+			console.error('sock');
 			this._dispatch(stateActions.setScreenShareInProgress(false));
 		} catch (error) {
 			logger.error('activateScreenShare() | failed: %o', error);
@@ -717,7 +719,9 @@ export default class RoomClient
 
 			// Leave Room.
 			try { this._room.remoteClose({ cause: 'protoo disconnected' }); }
-			catch (error) {}
+			catch (error) {
+				logger.error(`Could't leave room: ${error}`);
+			}
 
 			this._dispatch(stateActions.setRoomState('connecting'));
 		});
@@ -742,7 +746,6 @@ export default class RoomClient
 
 					break;
 				case 'active-speaker':
-
 					const { peerName } = notification.data;
 
 					this._dispatch(
@@ -1135,40 +1138,7 @@ export default class RoomClient
 							codec          : producer.rtpParameters.codecs[0].name
 						}));
 
-					producer.on('close', (originator) =>
-					{
-						logger.debug(
-							'webcam Producer "close" event [originator:%s]', originator);
-
-						this._webcamProducer = null;
-						this._dispatch(stateActions.removeProducer(producer.id));
-					});
-
-					producer.on('pause', (originator) =>
-					{
-						logger.debug(
-							'webcam Producer "pause" event [originator:%s]', originator);
-
-						this._dispatch(stateActions.setProducerPaused(producer.id, originator));
-					});
-
-					producer.on('resume', (originator) =>
-					{
-						logger.debug(
-							'webcam Producer "resume" event [originator:%s]', originator);
-
-						this._dispatch(stateActions.setProducerResumed(producer.id, originator));
-					});
-
-					producer.on('handled', () =>
-					{
-						logger.debug('webcam Producer "handled" event');
-					});
-
-					producer.on('unhandled', () =>
-					{
-						logger.debug('webcam Producer "unhandled" event');
-					});
+					this.initProducerEventListener(producer, 'Webcam');
 				})
 				.then(() =>
 				{
@@ -1237,33 +1207,6 @@ export default class RoomClient
 			});
 	}
 
-	/** Добавляем слушателей на эвенты продюсера */
-	initProducerEventListener(producer, producerName = 'Unnamed') {
-		producer.on('close', (originator) => {
-			logger.debug(`screenshare Producer "close" event [originator: ${originator}]`);
-			this._dispatch(stateActions.removeProducer(producer.id));
-			producer = null;
-		});
-
-		producer.on('pause', (originator) => {
-			logger.debug(`screenshare Producer "pause" event [originator: ${originator}]`);
-			this._dispatch(stateActions.setProducerPaused(producer.id, originator));
-		});
-
-		producer.on('resume', (originator) => {
-			logger.debug(`screenshare Producer "resume" event [originator: ${originator}]`);
-			this._dispatch(stateActions.setProducerResumed(producer.id, originator));
-		});
-
-		producer.on('handled', () => {
-			logger.debug('screenshare Producer "handled" event');
-		});
-
-		producer.on('unhandled', () => {
-			logger.debug('screenshare Producer "unhandled" event');
-		});
-	}
-
 	/**
 	 * Создание продюсера для показа экрана
 	 * @returns {Promise}
@@ -1273,16 +1216,19 @@ export default class RoomClient
 			throw 'screenshare Producer already exists';
 		}
 
-		const stream = screenShare.getScreenCaptureStream();
-		this._screenShareOriginalStream = stream;
+		console.error('before createProducer');
 
-		const track = stream.getVideoTracks()[0];
-		const producer = this._room.createProducer(
-			track, { simulcast: this._useSimulcast ? SIMULCAST_OPTIONS : false }, { source: 'screen' });
+		const producer = await screenShare.createProducer(
+			this._room,
+			this._sendTransport,
+			this._screenStreamId,
+			this._useSimulcast ? SIMULCAST_OPTIONS : false
+		);
 
-		await producer.send(this._sendTransport);
+		console.error('after createProducer');
 
 		this.initProducerEventListener(producer, 'Screenshare');
+		console.error('producer', producer);
 
 		this._dispatch(stateActions.addProducer({
 				id             : producer.id,
@@ -1293,24 +1239,9 @@ export default class RoomClient
 				codec          : producer.rtpParameters.codecs[0].name
 		}));
 
+		this._screenShareProducer = producer;
 		logger.debug('_setScreenShareProducer() succeeded');
-		return producer;
-}
-				// .catch((error) =>
-				// {
-				// 	logger.error('_setScreenShareProducer() failed:%o', error);
-				//
-				// 	this._dispatch(requestActions.notify(
-				// 		{
-				// 			text : `screenshare Producer failed: ${error.name}:${error.message}`
-				// 		}));
-				//
-				// 	if (producer)
-				// 		producer.close();
-				//
-				// 	throw error;
-				// });
-	// }
+	}
 
 	//Метод принимает MediaDeviceInfo и запоминает его в клиенте в зависимости от типа устройства
 	async setDevice(device) {
@@ -1505,7 +1436,7 @@ export default class RoomClient
 			{
 				logger.error(
 					'unexpected error while _updateMics:%o', error);
-			});;
+			});
 	}
 
 	_getWebcamType(device)

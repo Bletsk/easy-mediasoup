@@ -81,17 +81,19 @@ var ROOM_OPTIONS = {
 	}
 };
 
-var DEFAULT_VIDEO_CONSTRAINS = {
-	qvga: { width: { ideal: 320 }, height: { ideal: 240 } },
-	vga: { width: { ideal: 640 }, height: { ideal: 480 } },
-	hd: { width: { ideal: 1280 }, height: { ideal: 720 } }
-};
-
-var DEFAULT_SIMULCAST_OPTIONS = {
-	low: 100000,
-	medium: 300000,
-	high: 1500000
-};
+// let DEFAULT_VIDEO_CONSTRAINS =
+// {
+// 	qvga : { width: { ideal: 320 }, height: { ideal: 240 } },
+// 	vga  : { width: { ideal: 640 }, height: { ideal: 480 } },
+// 	hd   : { width: { ideal: 1280 }, height: { ideal: 720 } }
+// };
+//
+// let DEFAULT_SIMULCAST_OPTIONS =
+// {
+// 	low : 100000,
+// 	medium  : 300000,
+// 	high   : 1500000
+// };
 
 var VIDEO_CONSTRAINS = [];
 var SIMULCAST_OPTIONS = [];
@@ -130,7 +132,7 @@ var RoomClient = function () {
 		this._closed = false;
 
 		// Whether we should produce.
-		this._produce = args.produce;
+		this._produce = args.produce || produce;
 
 		this._skip_consumer = args.skip_consumer;
 
@@ -335,7 +337,9 @@ var RoomClient = function () {
 			this._dispatch(stateActions.setScreenShareInProgress(true));
 
 			try {
-				this._screenShareProducer = await _setScreenShareProducer();
+				console.error('poop');
+				await this._setScreenShareProducer();
+				console.error('sock');
 				this._dispatch(stateActions.setScreenShareInProgress(false));
 			} catch (error) {
 				logger.error('activateScreenShare() | failed: %o', error);
@@ -778,7 +782,9 @@ var RoomClient = function () {
 				// Leave Room.
 				try {
 					_this12._room.remoteClose({ cause: 'protoo disconnected' });
-				} catch (error) {}
+				} catch (error) {
+					logger.error('Could\'t leave room: ' + error);
+				}
 
 				_this12._dispatch(stateActions.setRoomState('connecting'));
 			});
@@ -1157,32 +1163,7 @@ var RoomClient = function () {
 						codec: producer.rtpParameters.codecs[0].name
 					}));
 
-					producer.on('close', function (originator) {
-						logger.debug('webcam Producer "close" event [originator:%s]', originator);
-
-						_this15._webcamProducer = null;
-						_this15._dispatch(stateActions.removeProducer(producer.id));
-					});
-
-					producer.on('pause', function (originator) {
-						logger.debug('webcam Producer "pause" event [originator:%s]', originator);
-
-						_this15._dispatch(stateActions.setProducerPaused(producer.id, originator));
-					});
-
-					producer.on('resume', function (originator) {
-						logger.debug('webcam Producer "resume" event [originator:%s]', originator);
-
-						_this15._dispatch(stateActions.setProducerResumed(producer.id, originator));
-					});
-
-					producer.on('handled', function () {
-						logger.debug('webcam Producer "handled" event');
-					});
-
-					producer.on('unhandled', function () {
-						logger.debug('webcam Producer "unhandled" event');
-					});
+					_this15.initProducerEventListener(producer, 'Webcam');
 				}).then(function () {
 					logger.debug('_setWebcamProducer() succeeded');
 				}).catch(function (error) {
@@ -1232,40 +1213,6 @@ var RoomClient = function () {
 			});
 		}
 
-		/** Добавляем слушателей на эвенты продюсера */
-
-	}, {
-		key: 'initProducerEventListener',
-		value: function initProducerEventListener(producer) {
-			var _this17 = this;
-
-			var producerName = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'Unnamed';
-
-			producer.on('close', function (originator) {
-				logger.debug('screenshare Producer "close" event [originator: ' + originator + ']');
-				_this17._dispatch(stateActions.removeProducer(producer.id));
-				producer = null;
-			});
-
-			producer.on('pause', function (originator) {
-				logger.debug('screenshare Producer "pause" event [originator: ' + originator + ']');
-				_this17._dispatch(stateActions.setProducerPaused(producer.id, originator));
-			});
-
-			producer.on('resume', function (originator) {
-				logger.debug('screenshare Producer "resume" event [originator: ' + originator + ']');
-				_this17._dispatch(stateActions.setProducerResumed(producer.id, originator));
-			});
-
-			producer.on('handled', function () {
-				logger.debug('screenshare Producer "handled" event');
-			});
-
-			producer.on('unhandled', function () {
-				logger.debug('screenshare Producer "unhandled" event');
-			});
-		}
-
 		/**
    * Создание продюсера для показа экрана
    * @returns {Promise}
@@ -1278,15 +1225,14 @@ var RoomClient = function () {
 				throw 'screenshare Producer already exists';
 			}
 
-			var stream = screenShare.getScreenCaptureStream();
-			this._screenShareOriginalStream = stream;
+			console.error('before createProducer');
 
-			var track = stream.getVideoTracks()[0];
-			var producer = this._room.createProducer(track, { simulcast: this._useSimulcast ? SIMULCAST_OPTIONS : false }, { source: 'screen' });
+			var producer = await screenShare.createProducer(this._room, this._sendTransport, this._screenStreamId, this._useSimulcast ? SIMULCAST_OPTIONS : false);
 
-			await producer.send(this._sendTransport);
+			console.error('after createProducer');
 
 			this.initProducerEventListener(producer, 'Screenshare');
+			console.error('producer', producer);
 
 			this._dispatch(stateActions.addProducer({
 				id: producer.id,
@@ -1297,24 +1243,9 @@ var RoomClient = function () {
 				codec: producer.rtpParameters.codecs[0].name
 			}));
 
+			this._screenShareProducer = producer;
 			logger.debug('_setScreenShareProducer() succeeded');
-			return producer;
 		}
-		// .catch((error) =>
-		// {
-		// 	logger.error('_setScreenShareProducer() failed:%o', error);
-		//
-		// 	this._dispatch(requestActions.notify(
-		// 		{
-		// 			text : `screenshare Producer failed: ${error.name}:${error.message}`
-		// 		}));
-		//
-		// 	if (producer)
-		// 		producer.close();
-		//
-		// 	throw error;
-		// });
-		// }
 
 		//Метод принимает MediaDeviceInfo и запоминает его в клиенте в зависимости от типа устройства
 
@@ -1474,7 +1405,7 @@ var RoomClient = function () {
 	}, {
 		key: '_updateMics',
 		value: function _updateMics() {
-			var _this18 = this;
+			var _this17 = this;
 
 			if (!this._produce) return 0;
 
@@ -1499,7 +1430,7 @@ var RoomClient = function () {
 
 						if (device.kind !== 'audioinput') continue;
 
-						_this18._mics.set(device.deviceId, device);
+						_this17._mics.set(device.deviceId, device);
 					}
 				} catch (err) {
 					_didIteratorError7 = true;
@@ -1516,28 +1447,28 @@ var RoomClient = function () {
 					}
 				}
 			}).then(function () {
-				var storageMic = _this18._storage.getItem('training-space-audio-input-device-id');
-				var array = (0, _from2.default)(_this18._mics.values());
+				var storageMic = _this17._storage.getItem('training-space-audio-input-device-id');
+				var array = (0, _from2.default)(_this17._mics.values());
 
-				if (_this18._mics.has(storageMic)) {
+				if (_this17._mics.has(storageMic)) {
 					//logger.debug('Обнаружен микрофон с ID:' + storageMic + " в localStorage");
-					_this18._mic = _this18._mics.get(storageMic);
+					_this17._mic = _this17._mics.get(storageMic);
 					return;
 				}
 
 				var len = array.length;
-				var currentMicId = _this18._mic ? _this18._mic.deviceId : undefined;
+				var currentMicId = _this17._mic ? _this17._mic.deviceId : undefined;
 
 				logger.debug('_updateMics() [microphones:%o]', array);
 
-				if (len === 0) _this18._mic = null;else if (!_this18._mics.has(currentMicId)) _this18._mic = array[0];
+				if (len === 0) _this17._mic = null;else if (!_this17._mics.has(currentMicId)) _this17._mic = array[0];
 
 				// this._dispatch(
 				// 	stateActions.setCanChangeWebcam(this._mics.size > 1)
 				// );
 			}).catch(function (error) {
 				logger.error('unexpected error while _updateMics:%o', error);
-			});;
+			});
 		}
 	}, {
 		key: '_getWebcamType',
@@ -1555,7 +1486,7 @@ var RoomClient = function () {
 	}, {
 		key: '_handlePeer',
 		value: function _handlePeer(peer) {
-			var _this19 = this;
+			var _this18 = this;
 
 			var _ref4 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
 			    _ref4$notify = _ref4.notify,
@@ -1604,10 +1535,10 @@ var RoomClient = function () {
 			peer.on('close', function (originator) {
 				logger.debug('peer "close" event [name:"%s", originator:%s]', peer.name, originator);
 
-				_this19._dispatch(stateActions.removePeer(peer.name));
+				_this18._dispatch(stateActions.removePeer(peer.name));
 
-				if (_this19._room.joined) {
-					_this19._dispatch(requestActions.notify({
+				if (_this18._room.joined) {
+					_this18._dispatch(requestActions.notify({
 						text: peer.appData.displayName + ' left the room'
 					}));
 				}
@@ -1616,13 +1547,13 @@ var RoomClient = function () {
 			peer.on('newconsumer', function (consumer) {
 				logger.debug('peer "newconsumer" event [name:"%s", id:%s, consumer:%o]', peer.name, consumer.id, consumer);
 
-				_this19._handleConsumer(consumer);
+				_this18._handleConsumer(consumer);
 			});
 		}
 	}, {
 		key: '_handleConsumer',
 		value: function _handleConsumer(consumer) {
-			var _this20 = this;
+			var _this19 = this;
 
 			if (this._skip_consumer && consumer.kind === 'audio') {
 				return;
@@ -1644,26 +1575,26 @@ var RoomClient = function () {
 			consumer.on('close', function (originator) {
 				logger.debug('consumer "close" event [id:%s, originator:%s, consumer:%o]', consumer.id, originator, consumer);
 
-				_this20._dispatch(stateActions.removeConsumer(consumer.id, consumer.peer.name));
+				_this19._dispatch(stateActions.removeConsumer(consumer.id, consumer.peer.name));
 			});
 
 			consumer.on('pause', function (originator) {
 				logger.debug('consumer "pause" event [id:%s, originator:%s, consumer:%o]', consumer.id, originator, consumer);
 
-				_this20._dispatch(stateActions.setConsumerPaused(consumer.id, originator));
+				_this19._dispatch(stateActions.setConsumerPaused(consumer.id, originator));
 			});
 
 			consumer.on('resume', function (originator) {
 				logger.debug('consumer "resume" event [id:%s, originator:%s, consumer:%o]', consumer.id, originator, consumer);
 
-				_this20._dispatch(stateActions.setConsumerResumed(consumer.id, originator));
+				_this19._dispatch(stateActions.setConsumerResumed(consumer.id, originator));
 			});
 
 			consumer.on('effectiveprofilechange', function (profile) {
 				consumer.setPreferredProfile(profile);
 				logger.debug('consumer "effectiveprofilechange" event [id:%s, consumer:%o, profile:%s]', consumer.id, consumer, profile);
 
-				_this20._dispatch(stateActions.setConsumerEffectiveProfile(consumer.id, profile));
+				_this19._dispatch(stateActions.setConsumerEffectiveProfile(consumer.id, profile));
 			});
 
 			// Receive the consumer (if we can).
@@ -1672,7 +1603,7 @@ var RoomClient = function () {
 				if (consumer.kind === 'video' && this._getState().me.audioOnly) consumer.pause('audio-only-mode');
 
 				consumer.receive(this._recvTransport).then(function (track) {
-					_this20._dispatch(stateActions.setConsumerTrack(consumer.id, track));
+					_this19._dispatch(stateActions.setConsumerTrack(consumer.id, track));
 				}).catch(function (error) {
 					logger.error('unexpected error while receiving a new Consumer:%o', error);
 				});
@@ -1686,7 +1617,7 @@ var RoomClient = function () {
 	}, {
 		key: 'record',
 		value: function record(interval) {
-			var _this21 = this;
+			var _this20 = this;
 
 			var dataType = { VIDEO: 'video', AUDIO: 'audio' };
 
@@ -1713,19 +1644,19 @@ var RoomClient = function () {
 			// this._audioRecorder = new RecordRtc(audioStream, audioOptions);
 
 			this._videoRecorder.ondataavailable = function (blob) {
-				uploadBlob(_this21._videoRecorder, blob, dataType.VIDEO);
+				uploadBlob(_this20._videoRecorder, blob, dataType.VIDEO);
 			};
 
 			this._audioRecorder.ondataavailable = function (blob) {
-				uploadBlob(_this21._audioRecorder, blob, dataType.AUDIO);
+				uploadBlob(_this20._audioRecorder, blob, dataType.AUDIO);
 			};
 
 			_axios2.default.get('http://127.0.0.1:5000/begin').then(function (res) {
 				logger.debug('Server is ready, start sending data...');
 
-				_this21._recordState = 'recording';
-				_this21._videoRecorder.start(interval);
-				_this21._audioRecorder.start(interval);
+				_this20._recordState = 'recording';
+				_this20._videoRecorder.start(interval);
+				_this20._audioRecorder.start(interval);
 			});
 
 			function uploadBlob(recorder, blob, datatype, index) {

@@ -1,12 +1,3 @@
-import Logger from '../Logger';
-
-const setScreenShare = (streamId) => {
-  logger.debug("setScreenShare()");
-  this._screenStreamId = streamId;
-  if(!this._screenShareProducer) this._activateScreenShare();
-  else this._changeScreenForShare();
-}
-
 /**
  * Получение потока захвата экрана
  * @param {string} ID потока экрана
@@ -14,8 +5,8 @@ const setScreenShare = (streamId) => {
  * @param {number} Высота захватываемого видео
  * @returns {MediaStream} Поток захвата экрана
  */
-export const getScreenCaptureStream = (screenStreamId, width = 1280, height = 720) => {
-  return navigator.mediaDevices.getUserMedia({
+export const getStream = async (screenStreamId, width = 1280, height = 720) => {
+  return await navigator.mediaDevices.getUserMedia({
     audio: false,
     video: {
       mandatory: {
@@ -27,3 +18,25 @@ export const getScreenCaptureStream = (screenStreamId, width = 1280, height = 72
     }
   });
 };
+
+/**
+ * Создание продюсера для показа экрана
+ * @returns {Promise}
+ */
+export const createProducer = async (room, msTransport, screenStreamId, simulcastOptions = false) => {
+  console.error('before getStream');
+  const stream = await getStream(screenStreamId);
+  console.error('after getStream');
+
+  const track = stream.getVideoTracks()[0];
+  const producer = room.createProducer(
+    track,
+    { simulcast: simulcastOptions },
+    { source: 'screen' }
+  );
+
+  console.error('before send');
+  await producer.send(msTransport);
+  console.error('after send');
+  return producer;
+}

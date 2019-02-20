@@ -10,7 +10,7 @@ bundle.bundle(function (err, source) {
     console.error(err);
   }
   fs.writeFileSync('dist/easy-mediasoup.bundle.js', source)
-  minimize();
+  // minimize();
   // fs.writeFileSync('dist/easy-mediasoup.bundle.min.js', uglify.minify('dist/easy-mediasoup.bundle.js'));
 
   // uglify.minify({"dist/easy-mediasoup.bundle.js": "compiled code"}, {

@@ -1,4 +1,4 @@
-import Logger from './Logger';
+import Logger from '../Logger';
 
 const setScreenShare = (streamId) => {
   logger.debug("setScreenShare()");
@@ -14,7 +14,7 @@ const setScreenShare = (streamId) => {
  * @param {number} Высота захватываемого видео
  * @returns {MediaStream} Поток захвата экрана
  */
-const getScreenCaptureStream = (screenStreamId, width = 1280, height = 720) => {
+export const getScreenCaptureStream = (screenStreamId, width = 1280, height = 720) => {
   return navigator.mediaDevices.getUserMedia({
     audio: false,
     video: {
@@ -26,8 +26,4 @@ const getScreenCaptureStream = (screenStreamId, width = 1280, height = 720) => {
       }
     }
   });
-}
-
-export {
-  getScreenCaptureStream,
-}
+};

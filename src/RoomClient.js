@@ -1,6 +1,6 @@
 import protooClient from 'protoo-client'
 import * as mediasoupClient from 'mediasoup-client'
-import Logger from './Logger'
+import { Logger } from './logger'
 import { getProtooUrl } from './urlFactory'
 // import * as cookiesManager from './cookiesManager';
 import * as requestActions from './redux/requestActions'
@@ -1100,7 +1100,7 @@ export default class RoomClient {
   async setDevice (device) {
     switch (device.kind) {
       case 'audioinput':
-        return this._microphoneHandler.setMicrophone(device)
+        return this.setMicrophone.setMicrophone(device)
       case 'videoinput':
         return this._setWebcam(device)
       default:

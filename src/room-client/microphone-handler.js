@@ -1,6 +1,6 @@
 import * as stateActions from '../redux/stateActions'
 import * as requestActions from '../redux/requestActions'
-import Logger from './Logger'
+import { Logger } from '../logger'
 
 const logger = new Logger('RoomClient::Microphone handler')
 
@@ -61,9 +61,25 @@ export default class MicrophoneHandler {
       }
     }
 
+    await this._checkCurrentMicrophone()
+
     const array = Array.from(this._mics.values())
     logger.debug('_updateMics() [microphones:%o]', array)
     return array
+  }
+
+  async _checkCurrentMicrophone () {
+    const array = Array.from(this._mics.values())
+    const currentMicId = this._mic ? this._mic.deviceId : undefined
+
+    if (array.length) {
+      if (!this._mics.has(currentMicId)) {
+        this._mic = array[0]
+        await this.setMicrophone(array[0])
+      }
+    } else {
+      this._mic = null
+    }
   }
 
   /** Set up producer for microphone */
@@ -195,20 +211,6 @@ export default class MicrophoneHandler {
       },
       video: false
     })
-  }
-
-  _checkCurrentMicrophone () {
-    const array = Array.from(this._mics.values())
-    const currentMicId = this._mic ? this._mic.deviceId : undefined
-
-    if (array.length) {
-      if (!this._mics.has(currentMicId)) {
-        this._mic = array[0]
-        this.setMicrophone(array[0])
-      }
-    } else {
-      this._mic = null
-    }
   }
 
   muteMic () {

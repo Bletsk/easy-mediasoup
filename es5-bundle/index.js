@@ -19,14 +19,6 @@ var _reduxLogger = require('redux-logger');
 
 var _mediasoupClient = require('mediasoup-client');
 
-var _Logger = require('./Logger');
-
-var _Logger2 = _interopRequireDefault(_Logger);
-
-var _utils = require('./utils');
-
-var utils = _interopRequireWildcard(_utils);
-
 var _requestActions = require('./redux/requestActions');
 
 var requestActions = _interopRequireWildcard(_requestActions);
@@ -51,8 +43,6 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-// import Room from './components/Room';
-
 var Init = exports.Init = function Init(config) {
   var _this = this;
 
@@ -61,7 +51,6 @@ var Init = exports.Init = function Init(config) {
   console.warn('Easy mediasoup v1.1.9');
   global.emitter = this.emitter = new emitter.default();
   this.roomClientMiddleware = _roomClientMiddleware2.default;
-  var logger = new _Logger2.default();
 
   this.emitter.on('joinRoom', function (client) {
     _this.client = client;
@@ -90,7 +79,7 @@ var Init = exports.Init = function Init(config) {
   var displayName = config.displayName;
   var isSipEndpoint = config.sipEndpoint || false;
   var useSimulcast = config.useSimulcast || false;
-  var media_server_wss = config.media_server_wss;
+  var mediaServerWSS = config.mediaServerWSS;
   var turnservers = config.turnservers || [];
   var args = [];
 
@@ -101,39 +90,9 @@ var Init = exports.Init = function Init(config) {
   args.skip_consumer = config.skip_consumer;
   args.user_uuid = config.user_uuid;
 
-  // if (!roomId)
-  // {
-  // 	roomId = randomString({ length: 8 }).toLowerCase();
-
-  // 	urlParser.query.roomId = roomId;
-  // 	window.history.pushState('', '', urlParser.toString());
-  // }
-
-  // Get the effective/shareable Room URL.
-  // const roomUrlParser = new UrlParse(window.location.href, true);
-
-  // for (const key of Object.keys(roomUrlParser.query))
-  // {
-  // 	// Don't keep some custom params.
-  // 	switch (key)
-  // 	{
-  // 		case 'roomId':
-  // 		case 'simulcast':
-  // 			break;
-  // 		default:
-  // 			delete roomUrlParser.query[key];
-  // 	}
-  // }
-  // delete roomUrlParser.hash;
-
-  // const roomUrl = roomUrlParser.toString();
-
   // Get displayName from cookie (if not already given as param).
   // const userCookie = cookiesManager.getUser() || {};
   var displayNameSet = void 0;
-
-  // if (!displayName)
-  // 	displayName = userCookie.displayName;
 
   if (displayName) {
     displayNameSet = true;
@@ -152,59 +111,14 @@ var Init = exports.Init = function Init(config) {
     device.version = undefined;
   }
 
-  // // NOTE: I don't like this.
-  // store.dispatch(
-  // 	stateActions.setRoomUrl(roomUrl));
-
   // NOTE: I don't like this.
   store.dispatch(stateActions.setMe({ peerName: peerName, displayName: displayName, displayNameSet: displayNameSet, device: device }));
 
   // NOTE: I don't like this.
-  store.dispatch(requestActions.joinRoom({ media_server_wss: media_server_wss, roomId: roomId, peerName: peerName, displayName: displayName, device: device, useSimulcast: useSimulcast, produce: produce, turnservers: turnservers, args: args }));
+  store.dispatch(requestActions.joinRoom({ mediaServerWSS: mediaServerWSS, roomId: roomId, peerName: peerName, displayName: displayName, device: device, useSimulcast: useSimulcast, produce: produce, turnservers: turnservers, args: args }));
 
   // TODO: Debugging stuff.
-
-  // setInterval(() =>
-  // {
-  // 	if (!global.CLIENT._room.peers[0])
-  // 	{
-  // 		delete global.CONSUMER;
-
-  // 		return;
-  // 	}
-
-  // 	const peer = global.CLIENT._room.peers[0];
-
-  // 	global.CONSUMER = peer.consumers[peer.consumers.length - 1];
-  // }, 2000);
-
-  // global.sendSdp = function()
-  // {
-  // 	logger.debug('---------- SEND_TRANSPORT LOCAL SDP OFFER:');
-  // 	logger.debug(
-  // 		global.CLIENT._sendTransport._handler._pc.localDescription.sdp);
-
-  // 	logger.debug('---------- SEND_TRANSPORT REMOTE SDP ANSWER:');
-  // 	logger.debug(
-  // 		global.CLIENT._sendTransport._handler._pc.remoteDescription.sdp);
-  // };
-
-  // global.recvSdp = function()
-  // {
-  // 	logger.debug('---------- RECV_TRANSPORT REMOTE SDP OFFER:');
-  // 	logger.debug(
-  // 		global.CLIENT._recvTransport._handler._pc.remoteDescription.sdp);
-
-  // 	logger.debug('---------- RECV_TRANSPORT LOCAL SDP ANSWER:');
-  // 	logger.debug(
-  // 		global.CLIENT._recvTransport._handler._pc.localDescription.sdp);
-  // };
-};
-// import * as cookiesManager from './cookiesManager';
-
-// import randomString from 'random-string';
-// import randomName from 'node-random-name';
-// import domready from 'domready';
+}; // import domready from 'domready';
 // import UrlParse from 'url-parse';
 // import React from 'react';
 // import { render } from 'react-dom';
